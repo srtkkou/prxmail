@@ -29,7 +29,7 @@ func AppMain(gitRevision string) (code int) {
 	Logger.Info().
 		Str("host", os.Getenv("HOST")).
 		Str("port", os.Getenv("PORT")).
-		Str("from", os.Getenv("FROM")).
+		Str("username", os.Getenv("USERNAME")).
 		Str("password", os.Getenv("PASSWORD")).
 		Msg("")
 	return 0
