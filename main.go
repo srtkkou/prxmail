@@ -16,6 +16,8 @@ var (
 func AppMain(gitRevision string) (code int) {
 	// ロガーの初期化
 	SetupLogger()
+	// リビジョンの記録
+	Logger.Info().Str("Revision", gitRevision).Msg("start")
 	// 環境変数の読み込み
 	err := godotenv.Load()
 	if err != nil {
