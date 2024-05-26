@@ -27,4 +27,15 @@ tasks:
     deps: [staticcheck]
     cmds:
       - go run cmd/prxmail/main.go
+  build:
+    deps: [staticcheck]
+    cmds:
+      - go build -ldflags "-X main.Revision={{.GIT_HASH}}" -o prxmail.exe cmd/prxmail/main.go
+    env:
+      CGO_ENABLED: 0
+      GOOS: linux
+      GOARCH: amd64
+    vars:
+      GIT_HASH:
+        sh: git rev-parse HEAD
 
