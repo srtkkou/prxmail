@@ -14,6 +14,7 @@ var (
 )
 
 func AppMain(gitRevision string) (code int) {
+	logMsg := "prxmail.main.AppMain()"
 	// ロガーの初期化
 	SetupLogger()
 	// リビジョンの記録
@@ -22,7 +23,7 @@ func AppMain(gitRevision string) (code int) {
 	err := godotenv.Load()
 	if err != nil {
 		err = errs.Wrap(ErrMainDotenvLoad, errs.WithCause(err))
-		Logger.Error().Err(err).Msg("prxmail.AppMain()")
+		Logger.Error().Err(err).Msg(logMsg)
 		return -1
 	}
 	// 環境変数の読み込み
@@ -32,5 +33,23 @@ func AppMain(gitRevision string) (code int) {
 		Str("username", os.Getenv("USERNAME")).
 		Str("password", os.Getenv("PASSWORD")).
 		Msg("")
+	// メッセージの組み立て
+	builder := NewMessageBuilder()
+	if err := builder.SetFromAddr("admin@example.com"); err != nil {
+		Logger.Error().Err(err).Msg(logMsg)
+		return -1
+	}
+	if err := builder.SetToAddrs("alice@foo.bar", "bob@foo.bar"); err != nil {
+		Logger.Error().Err(err).Msg(logMsg)
+		return -1
+	}
+	builder.SetSubject("Test Subject")
+	builder.SetBody("Body Body Body\nBody Body Body")
+	message, err := builder.Build()
+	if err != nil {
+		Logger.Error().Err(err).Msg(logMsg)
+		return -1
+	}
+	Logger.Info().Str("Message", message).Msg(logMsg)
 	return 0
 }
