@@ -28,3 +28,6 @@ go.work
 .env.*.local
 *.env
 
+# Log
+*.log
+
