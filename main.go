@@ -88,16 +88,12 @@ func AppMain(args []string, revision string) (code int) {
 		return 0
 	}
 	// アプリケーション情報の記録
-	logPassword := ""
-	if len(config.Password) > 0 {
-		logPassword = "********"
-	}
 	Logger.Info().Str("version", config.Version).
 		Str("revision", config.Revision).
 		Str("host", config.Host).
 		Str("port", config.Port).
 		Str("username", config.Username).
-		Str("password", logPassword).
+		Str("password", config.LogPassword()).
 		Str("from", config.From).
 		Strs("to", config.Recipients).
 		Str("subject", config.Subject).

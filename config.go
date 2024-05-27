@@ -3,6 +3,7 @@ package prxmail
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 type (
@@ -53,6 +54,17 @@ func GetConfigInstance() *Config {
 // バージョン情報の取得
 func (c *Config) VersionInfo() string {
 	return fmt.Sprintf("%s (build:%s)", c.Version, c.Revision)
+}
+
+// ログ出力するパスワード
+func (c *Config) LogPassword() string {
+	size := len(c.Password)
+	// 2文字以内の場合はすべてマスクする。
+	if size <= 2 {
+		return strings.Repeat("*", size)
+	}
+	// その他の場合、最初の2文字以外をマスクする。
+	return c.Password[0:2] + strings.Repeat("*", (size-2))
 }
 
 // TLSサーバ
