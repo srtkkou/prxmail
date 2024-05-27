@@ -5,23 +5,42 @@ import (
 )
 
 type (
+	// 設定
 	Config struct {
-		Version  string
+		// バージョン
+		Version string
+		// Gitリビジョン
 		Revision string
-		Host     string
-		Port     string
+		// ホスト
+		Host string
+		// ポート
+		Port string
+		// SASL Authユーザ
 		Username string
+		// SASL Authパスワード
 		Password string
+		// 送信元
+		From string
+		// 送信先
+		Recipients []string
+		// 件名
+		Subject string
+		// ヘルプの表示が必要か？
+		IsHelpRequested bool
+		// バージョンの表示が必要か？
+		IsVersionRequested bool
 	}
 )
 
-// 設定の初期化
-var configInstance = &Config{
-	Version: "v0.0.1",
-}
+var (
+	// 設定のインスタンス
+	configInstance = &Config{
+		Version: "v0.0.1",
+	}
+)
 
 // 設定の取得
-func GetConfig() *Config {
+func GetConfigInstance() *Config {
 	return configInstance
 }
 

@@ -3,103 +3,121 @@ package prxmail
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"net/smtp"
 	"os"
 
 	"github.com/goark/errs"
 	"github.com/joho/godotenv"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/pflag"
 )
 
 var (
 	// バージョン
 	Version = "v0.0.1"
 	// envファイルロードエラー
-	ErrMainDotenvLoad = errors.New("main.ErrMainDotendLoad")
+	ErrMainDotenvLoad = errors.New("prxmail.main.ErrMainDotenvLoad")
 	// 引数解析エラー
-	ErrMainArgs = errors.New("main.ErrMainArgs")
+	ErrMainArgs = errors.New("prxmail.main.ErrMainArgs")
 	// TLSダイヤルエラー
-	ErrMainTlsDial = errors.New("main.ErrMainTlsDial")
+	ErrMainTlsDial = errors.New("prxmail.main.ErrMainTlsDial")
 	// SMTPクライアント初期化エラー
-	ErrMainSmtpNewClient = errors.New("main.ErrMainSmtpNewClient")
+	ErrMainSmtpNewClient = errors.New("prxmail.main.ErrMainSmtpNewClient")
 	// SMTPエラー
-	ErrMainSmtpAuth = errors.New("main.ErrMainSmtpAuth")
+	ErrMainSmtpAuth = errors.New("prxmail.main.ErrMainSmtpAuth")
 	// SMTP MAILコマンドエラー
-	ErrMainSmtpMail = errors.New("main.ErrMainSmtpMail")
+	ErrMainSmtpMail = errors.New("prxmail.main.ErrMainSmtpMail")
 	// SMTP RCPTコマンドエラー
-	ErrMainSmtpRcpt = errors.New("main.ErrMainSmtpRcpt")
+	ErrMainSmtpRcpt = errors.New("prxmail.main.ErrMainSmtpRcpt")
 	// SMTP DATAコマンドエラー
-	ErrMainSmtpData = errors.New("main.ErrMainSmtpData")
+	ErrMainSmtpData = errors.New("prxmail.main.ErrMainSmtpData")
 	// SMTP 書き込みエラー
-	ErrMainSmtpWrite = errors.New("main.ErrMainSmtpWrite")
+	ErrMainSmtpWrite = errors.New("prxmail.main.ErrMainSmtpWrite")
 )
 
 func AppMain(args []string, revision string) (code int) {
 	logMsg := "prxmail.main.AppMain()"
 	// 設定の初期化
-	config := GetConfig()
+	config := GetConfigInstance()
 	config.Revision = revision
 	// ロガーの初期化
 	SetupLogger()
 	// 環境変数の読み込み
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		err = errs.Wrap(ErrMainDotenvLoad, errs.WithCause(err))
 		Logger.Error().Err(err).Msg(logMsg)
 		return -1
 	}
-	// 引数の解析
-	app := &cli.App{
-		Version: config.VersionInfo(),
-		Action: func(cCtx *cli.Context) error {
-			return CliAction()
-		},
-	}
-	if err = app.Run(args); err != nil {
+	// フラグの解析
+	if err := ParseFlags(); err != nil {
 		err = errs.Wrap(ErrMainArgs, errs.WithCause(err))
+		Logger.Error().Err(err).Msg(logMsg)
+		return -1
+	}
+	// 環境変数の読み込み
+	config.Host = os.Getenv("HOST")
+	config.Port = os.Getenv("PORT")
+	config.Username = os.Getenv("USERNAME")
+	config.Password = os.Getenv("PASSWORD")
+	// ヘルプの表示
+	if config.IsHelpRequested {
+		pflag.PrintDefaults()
+		return 0
+	}
+	// バージョンの表示
+	if config.IsVersionRequested {
+		fmt.Printf("prxmail %s\n", config.VersionInfo())
+		return 0
+	}
+	// アプリケーション情報の記録
+	logPassword := ""
+	if len(config.Password) > 0 {
+		logPassword = "********"
+	}
+	Logger.Info().Str("version", config.Version).
+		Str("revision", config.Revision).
+		Str("host", config.Host).
+		Str("port", config.Port).
+		Str("username", config.Username).
+		Str("password", logPassword).
+		Str("from", config.From).
+		Strs("to", config.Recipients).
+		Str("subject", config.Subject).
+		Msg("start")
+	// メールの組み立て
+	mail, err := BuildMail()
+	if err != nil {
+		Logger.Error().Err(err).Msg(logMsg)
+		return -1
+	}
+	// メールの送信
+	if err := Send(mail); err != nil {
 		Logger.Error().Err(err).Msg(logMsg)
 		return -1
 	}
 	return 0
 }
 
-func CliAction() error {
-	config := GetConfig()
-	// リビジョンの記録
-	Logger.Info().Str("Version", config.VersionInfo()).Msg("start")
-	// 環境変数の読み込み
-	config.Host = os.Getenv("HOST")
-	config.Port = os.Getenv("PORT")
-	config.Username = os.Getenv("USERNAME")
-	config.Password = os.Getenv("PASSWORD")
-	Logger.Info().
-		Str("host", config.Host).
-		Str("port", config.Port).
-		Str("username", config.Username).
-		Str("password", config.Password).
-		Msg("")
-	// メッセージの組み立て
+// メールの組み立て
+func BuildMail() (*Mail, error) {
+	config := GetConfigInstance()
 	mail := NewMail()
-	mail.Subject = "Test Subject"
+	mail.Subject = config.Subject
 	mail.Body = "Body Body Body\nBody Body Body"
-	if err := mail.SetFrom("admin@example.com"); err != nil {
-		return err
+	if err := mail.SetFrom(config.Subject); err != nil {
+		return nil, err
 	}
-	if err := mail.SetRecipients("alice@foo.bar", "bob@foo.bar"); err != nil {
-		return err
+	if err := mail.SetRecipients(config.Recipients...); err != nil {
+		return nil, err
 	}
-	// メールの送信
-	if err := Send(mail); err != nil {
-		return err
-	}
-	return nil
+	return mail, nil
 }
 
+// メールの送信
 func Send(mail *Mail) error {
 	logMsg := "prxmail.main.Send()"
-	// 設定の取得
-	config := GetConfig()
+	config := GetConfigInstance()
 	// TLS認証準備
 	tlsServer := config.TlsServer()
 	tlsConf := &tls.Config{
