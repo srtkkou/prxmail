@@ -1,12 +1,15 @@
 package prxmail
 
 import (
+	"context"
 	"fmt"
 )
 
 type (
 	// 設定
 	Config struct {
+		// コンテキスト
+		Ctx context.Context
 		// バージョン
 		Version string
 		// Gitリビジョン
@@ -35,6 +38,7 @@ type (
 var (
 	// 設定のインスタンス
 	configInstance = &Config{
+		Ctx:     context.Background(),
 		Version: "v0.0.1",
 	}
 )
