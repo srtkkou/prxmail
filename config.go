@@ -3,6 +3,7 @@ package prxmail
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -67,7 +68,7 @@ func (c *Config) LogPassword() string {
 	return c.Password[0:2] + strings.Repeat("*", (size-2))
 }
 
-// TLSサーバ
-func (c *Config) TlsServer() string {
-	return fmt.Sprintf("%s:%s", c.Host, c.Port)
+// ポート番号付きホスト名
+func (c *Config) HostWithPort() string {
+	return net.JoinHostPort(c.Host, c.Port)
 }

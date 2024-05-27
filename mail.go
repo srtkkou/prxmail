@@ -37,23 +37,29 @@ func NewMail() *Mail {
 }
 
 // 送信元の取得
-func (m *Mail) From() *mail.Address {
-	return m.from
+func (m *Mail) From() string {
+	return m.from.Address
 }
 
 // 送信元の設定
 func (m *Mail) SetFrom(addr string) error {
 	from, err := mail.ParseAddress(addr)
 	if err != nil {
-		return errs.Wrap(ErrMailAddressInvalid, errs.WithCause(err))
+		return errs.Wrap(ErrMailAddressInvalid,
+			errs.WithCause(err),
+			errs.WithContext("addr", addr))
 	}
 	m.from = from
 	return nil
 }
 
 // 送信先の取得
-func (m *Mail) Recipients() [](*mail.Address) {
-	return m.recipients
+func (m *Mail) Recipients() []string {
+	strs := make([]string, len(m.recipients))
+	for i, recipient := range m.recipients {
+		strs[i] = recipient.Address
+	}
+	return strs
 }
 
 // 送信先の設定
@@ -61,7 +67,9 @@ func (m *Mail) SetRecipients(addrs ...string) error {
 	for _, addr := range addrs {
 		to, err := mail.ParseAddress(addr)
 		if err != nil {
-			return errs.Wrap(ErrMailAddressInvalid, errs.WithCause(err))
+			return errs.Wrap(ErrMailAddressInvalid,
+				errs.WithCause(err),
+				errs.WithContext("addr", addr))
 		}
 		m.recipients = append(m.recipients, to)
 	}
@@ -83,16 +91,11 @@ func (m *Mail) Message() (string, error) {
 	// 送信元の組み立て
 	var sb strings.Builder
 	sb.WriteString("From: ")
-	sb.WriteString(m.from.String())
+	sb.WriteString(m.From())
 	sb.WriteString("\r\n")
 	// 送信先の組み立て
 	sb.WriteString("To: ")
-	for i, recipient := range m.recipients {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		sb.WriteString(recipient.String())
-	}
+	sb.WriteString(strings.Join(m.Recipients(), ","))
 	sb.WriteString("\r\n")
 	// 件名の組み立て
 	sb.WriteString("Subject: ")

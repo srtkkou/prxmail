@@ -2,7 +2,6 @@ package prxmail
 
 import (
 	"bufio"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -27,20 +26,8 @@ var (
 	ErrMainTermStdin = errors.New("prxmail.main.ErrMainTermStdin")
 	// 標準入力読み込みエラー
 	ErrMainStdinRead = errors.New("prxmail.main.ErrMainStdinRead")
-	// TLSダイヤルエラー
-	ErrMainTlsDial = errors.New("prxmail.main.ErrMainTlsDial")
-	// SMTPクライアント初期化エラー
-	ErrMainSmtpNewClient = errors.New("prxmail.main.ErrMainSmtpNewClient")
-	// SMTPエラー
-	ErrMainSmtpAuth = errors.New("prxmail.main.ErrMainSmtpAuth")
-	// SMTP MAILコマンドエラー
-	ErrMainSmtpMail = errors.New("prxmail.main.ErrMainSmtpMail")
-	// SMTP RCPTコマンドエラー
-	ErrMainSmtpRcpt = errors.New("prxmail.main.ErrMainSmtpRcpt")
-	// SMTP DATAコマンドエラー
-	ErrMainSmtpData = errors.New("prxmail.main.ErrMainSmtpData")
-	// SMTP 書き込みエラー
-	ErrMainSmtpWrite = errors.New("prxmail.main.ErrMainSmtpWrite")
+	// SMTPメール送信エラー
+	ErrMainSmtpSendMail = errors.New("prxmail.main.ErrMainSmtpSendMail")
 )
 
 func AppMain(args []string, revision string) (code int) {
@@ -145,68 +132,30 @@ func BuildMail() (*Mail, error) {
 }
 
 // メールの送信
-func Send(mail *Mail) error {
+func Send(mail *Mail) (err error) {
 	logMsg := "prxmail.main.Send()"
 	config := GetConfigInstance()
-	// TLS認証準備
-	tlsServer := config.TlsServer()
-	tlsConf := &tls.Config{
-		InsecureSkipVerify: true,
-		ServerName:         config.Host,
-	}
-	// TLS通信開始
-	tlsConn, err := tls.Dial("tcp", tlsServer, tlsConf)
-	if err != nil {
-		return errs.Wrap(ErrMainTlsDial, errs.WithCause(err),
-			errs.WithContext("server", tlsServer))
-	}
-	defer tlsConn.Close()
-	// SMTP通信開始
-	client, err := smtp.NewClient(tlsConn, config.Host)
-	if err != nil {
-		return errs.Wrap(ErrMainSmtpNewClient, errs.WithCause(err),
-			errs.WithContext("host", config.Host))
-	}
-	defer client.Quit()
-	// 認証の実行
-	auth := smtp.PlainAuth(
-		"", config.Username, config.Password, config.Host,
-	)
-	if err = client.Auth(auth); err != nil {
-		return errs.Wrap(ErrMainSmtpAuth, errs.WithCause(err),
-			errs.WithContext("username", config.Username),
-			errs.WithContext("password", config.Password),
-			errs.WithContext("host", config.Host),
-		)
-	}
-	// MAILコマンドの実行
-	if err = client.Mail(mail.From().String()); err != nil {
-		return errs.Wrap(ErrMainSmtpMail, errs.WithCause(err),
-			errs.WithContext("from", mail.From().String()))
-	}
-	// RCPTコマンドの実行
-	for _, recipient := range mail.Recipients() {
-		if err = client.Rcpt(recipient.String()); err != nil {
-			return errs.Wrap(ErrMainSmtpRcpt, errs.WithCause(err),
-				errs.WithContext("recipient", recipient.String()))
-		}
-	}
-	// DATAコマンドの実行
-	w, err := client.Data()
-	if err != nil {
-		return errs.Wrap(ErrMainSmtpData, errs.WithCause(err))
-	}
-	defer w.Close()
-	writer := io.MultiWriter(w, os.Stdout)
 	// メッセージの取得
 	message, err := mail.Message()
 	if err != nil {
 		return err
 	}
-	// メッセージの書き込み
-	if _, err = writer.Write([]byte(message)); err != nil {
-		return errs.Wrap(ErrMainSmtpWrite, errs.WithCause(err),
-			errs.WithContext("message", message))
+	fmt.Println(message)
+	// メールの送信
+	err = smtp.SendMail(
+		config.HostWithPort(),
+		NewPlainOrLoginAuth(),
+		mail.From(),
+		mail.Recipients(),
+		[]byte(message),
+	)
+	if err != nil {
+		return errs.Wrap(ErrMainSmtpSendMail, errs.WithCause(err),
+			errs.WithContext("host", config.HostWithPort()),
+			errs.WithContext("from", mail.From()),
+			errs.WithContext("to", mail.Recipients()),
+			errs.WithContext("message", message),
+		)
 	}
 	Logger.Info().Str("Message", message).Msg(logMsg)
 	return nil
