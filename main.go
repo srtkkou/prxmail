@@ -27,29 +27,33 @@ func AppMain(gitRevision string) (code int) {
 		return -1
 	}
 	// 環境変数の読み込み
+	host := os.Getenv("HOST")
+	port := os.Getenv("PORT")
+	username := os.Getenv("USERNAME")
+	password := os.Getenv("PASSWORD")
 	Logger.Info().
-		Str("host", os.Getenv("HOST")).
-		Str("port", os.Getenv("PORT")).
-		Str("username", os.Getenv("USERNAME")).
-		Str("password", os.Getenv("PASSWORD")).
+		Str("host", host).Str("port", port).
+		Str("username", username).
+		Str("password", password).
 		Msg("")
 	// メッセージの組み立て
-	builder := NewMessageBuilder()
-	if err := builder.SetFromAddr("admin@example.com"); err != nil {
+	mail := NewMail()
+	mail.Subject = "Test Subject"
+	mail.Body = "Body Body Body\nBody Body Body"
+	if err := mail.SetFrom("admin@example.com"); err != nil {
 		Logger.Error().Err(err).Msg(logMsg)
 		return -1
 	}
-	if err := builder.SetToAddrs("alice@foo.bar", "bob@foo.bar"); err != nil {
+	if err := mail.SetRecipients("alice@foo.bar", "bob@foo.bar"); err != nil {
 		Logger.Error().Err(err).Msg(logMsg)
 		return -1
 	}
-	builder.SetSubject("Test Subject")
-	builder.SetBody("Body Body Body\nBody Body Body")
-	message, err := builder.Build()
+	message, err := mail.Message()
 	if err != nil {
 		Logger.Error().Err(err).Msg(logMsg)
 		return -1
 	}
+	// メールの送信
 	Logger.Info().Str("Message", message).Msg(logMsg)
 	return 0
 }
