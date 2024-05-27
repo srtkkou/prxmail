@@ -2,9 +2,14 @@ package prxmail
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/goark/errs"
 )
 
 type (
@@ -16,6 +21,8 @@ type (
 		Version string
 		// Gitリビジョン
 		Revision string
+		// 実行ファイルのパス
+		ExePath string
 		// ホスト
 		Host string
 		// ポート
@@ -47,9 +54,45 @@ var (
 	}
 )
 
+var (
+	// 実行ファイルパスが取得できない。
+	ErrConfigExePath = errors.New("prxmail.config.ErrConfigExePath")
+)
+
 // 設定の取得
 func GetConfigInstance() *Config {
 	return configInstance
+}
+
+// 実行ファイルパスの設定
+func (c *Config) LoadExePath() (err error) {
+	// 実行ファイルのパスの取得
+	var exePath string
+	exePath, err = os.Executable()
+	if err != nil {
+		return errs.Wrap(ErrConfigExePath, errs.WithCause(err))
+	}
+	// 絶対パスの取得
+	c.ExePath, err = filepath.Abs(exePath)
+	if err != nil {
+		return errs.Wrap(ErrConfigExePath, errs.WithCause(err))
+	}
+	return nil
+}
+
+// 実行ファイルのディレクトリ
+func (c *Config) ExeDir() string {
+	return filepath.Dir(c.ExePath)
+}
+
+// ログファイルのパス
+func (c *Config) LogPath() string {
+	return filepath.Join(c.ExeDir(), "prxmail.log")
+}
+
+// 環境変数ファイルのパス
+func (c *Config) EnvPath() string {
+	return filepath.Join(c.ExeDir(), "prxmail.env")
 }
 
 // バージョン情報の取得

@@ -37,9 +37,11 @@ func init() {
 
 // ログ出力先の設定
 func SetupLogger() {
+	// 設定の取得
+	config := GetConfigInstance()
 	// ログファイルの設定
 	fileWriter := &lumberjack.Logger{
-		Filename:   "prxmail.log",
+		Filename:   config.LogPath(),
 		MaxSize:    LOG_MAX_SIZE,
 		MaxBackups: LOG_MAX_BACKUPS,
 	}
