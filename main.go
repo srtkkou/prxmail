@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/goark/errs"
@@ -18,6 +19,8 @@ import (
 var (
 	// バージョン
 	Version = "v0.0.1"
+	// 実行ファイルパスロードエラー
+	ErrMainExePath = errors.New("prxmail.main.ErrMainExePath")
 	// envファイルロードエラー
 	ErrMainDotenvLoad = errors.New("prxmail.main.ErrMainDotenvLoad")
 	// 引数解析エラー
@@ -53,8 +56,14 @@ func AppMain(revision string) (code int) {
 		fmt.Printf("prxmail %s\n", config.VersionInfo())
 		return 0
 	}
+	// 環境変数ファイルパスの取得
+	envPath, err := envFilePath()
+	if err != nil {
+		ErrorLog(err)
+		return -1
+	}
 	// 環境変数ファイルの読み込み
-	if err = godotenv.Load("prxmail.env"); err != nil {
+	if err = godotenv.Load(envPath); err != nil {
 		err = errs.Wrap(ErrMainDotenvLoad, errs.WithCause(err))
 		ErrorLog(err)
 		return -1
@@ -159,4 +168,24 @@ func Send(mail *Mail) (err error) {
 	}
 	Logger.Info().Str("Message", message).Msg(logMsg)
 	return nil
+}
+
+// 環境変数ファイルパスの取得
+func envFilePath() (string, error) {
+	// 実行ファイルのパスの取得
+	exePath, err := os.Executable()
+	if err != nil {
+		err = errs.Wrap(ErrMainExePath, errs.WithCause(err))
+		return "", err
+	}
+	// 絶対パスの取得
+	exeAbsPath, err := filepath.Abs(exePath)
+	if err != nil {
+		err = errs.Wrap(ErrMainExePath, errs.WithCause(err))
+		return "", err
+	}
+	// 環境変数ファイルパスの組み立て
+	envPath := filepath.Join(
+		filepath.Dir(exeAbsPath), "prxmail.env")
+	return envPath, nil
 }
