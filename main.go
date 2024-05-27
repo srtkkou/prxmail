@@ -54,7 +54,7 @@ func AppMain(revision string) (code int) {
 		return 0
 	}
 	// 環境変数ファイルの読み込み
-	if err = godotenv.Load(); err != nil {
+	if err = godotenv.Load("prxmail.env"); err != nil {
 		err = errs.Wrap(ErrMainDotenvLoad, errs.WithCause(err))
 		ErrorLog(err)
 		return -1
