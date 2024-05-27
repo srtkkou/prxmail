@@ -1,6 +1,7 @@
 package prxmail
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -47,4 +48,10 @@ func SetupLogger() {
 	Logger = &AppLogger{
 		Logger: Logger.Output(writer),
 	}
+}
+
+// エラーの出力
+func ErrorLog(err error) {
+	errStr := fmt.Sprintf("%+v", err)
+	Logger.Error().RawJSON("error", []byte(errStr)).Msg("")
 }

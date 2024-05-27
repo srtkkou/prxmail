@@ -1,16 +1,19 @@
 package prxmail
 
 import (
+	"bufio"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net/smtp"
 	"os"
+	"strings"
 
 	"github.com/goark/errs"
 	"github.com/joho/godotenv"
 	"github.com/spf13/pflag"
+	"golang.org/x/term"
 )
 
 var (
@@ -20,6 +23,10 @@ var (
 	ErrMainDotenvLoad = errors.New("prxmail.main.ErrMainDotenvLoad")
 	// 引数解析エラー
 	ErrMainArgs = errors.New("prxmail.main.ErrMainArgs")
+	// ターミナルの標準入力は受け付けない
+	ErrMainTermStdin = errors.New("prxmail.main.ErrMainTermStdin")
+	// 標準入力読み込みエラー
+	ErrMainStdinRead = errors.New("prxmail.main.ErrMainStdinRead")
 	// TLSダイヤルエラー
 	ErrMainTlsDial = errors.New("prxmail.main.ErrMainTlsDial")
 	// SMTPクライアント初期化エラー
@@ -37,29 +44,18 @@ var (
 )
 
 func AppMain(args []string, revision string) (code int) {
-	logMsg := "prxmail.main.AppMain()"
+	var err error
 	// 設定の初期化
 	config := GetConfigInstance()
 	config.Revision = revision
 	// ロガーの初期化
 	SetupLogger()
-	// 環境変数の読み込み
-	if err := godotenv.Load(); err != nil {
-		err = errs.Wrap(ErrMainDotenvLoad, errs.WithCause(err))
-		Logger.Error().Err(err).Msg(logMsg)
-		return -1
-	}
 	// フラグの解析
-	if err := ParseFlags(); err != nil {
+	if err = ParseFlags(); err != nil {
 		err = errs.Wrap(ErrMainArgs, errs.WithCause(err))
-		Logger.Error().Err(err).Msg(logMsg)
+		ErrorLog(err)
 		return -1
 	}
-	// 環境変数の読み込み
-	config.Host = os.Getenv("HOST")
-	config.Port = os.Getenv("PORT")
-	config.Username = os.Getenv("USERNAME")
-	config.Password = os.Getenv("PASSWORD")
 	// ヘルプの表示
 	if config.IsHelpRequested {
 		pflag.PrintDefaults()
@@ -68,6 +64,27 @@ func AppMain(args []string, revision string) (code int) {
 	// バージョンの表示
 	if config.IsVersionRequested {
 		fmt.Printf("prxmail %s\n", config.VersionInfo())
+		return 0
+	}
+	// 環境変数ファイルの読み込み
+	if err = godotenv.Load(); err != nil {
+		err = errs.Wrap(ErrMainDotenvLoad, errs.WithCause(err))
+		ErrorLog(err)
+		return -1
+	}
+	// 環境変数の読み込み
+	config.Host = os.Getenv("HOST")
+	config.Port = os.Getenv("PORT")
+	config.Username = os.Getenv("USERNAME")
+	config.Password = os.Getenv("PASSWORD")
+	// パイプの読み込み
+	config.Body, err = ReadPipe()
+	if err != nil {
+		ErrorLog(err)
+		return -1
+	}
+	if len(config.Body) == 0 {
+		fmt.Println("パイプからメール本文を設定してください。")
 		return 0
 	}
 	// アプリケーション情報の記録
@@ -88,15 +105,32 @@ func AppMain(args []string, revision string) (code int) {
 	// メールの組み立て
 	mail, err := BuildMail()
 	if err != nil {
-		Logger.Error().Err(err).Msg(logMsg)
+		ErrorLog(err)
 		return -1
 	}
 	// メールの送信
 	if err := Send(mail); err != nil {
-		Logger.Error().Err(err).Msg(logMsg)
+		ErrorLog(err)
 		return -1
 	}
 	return 0
+}
+
+// パイプの読み込み
+func ReadPipe() (string, error) {
+	// ターミナル入力の場合は処理しない。
+	isTerm := term.IsTerminal(int(os.Stdin.Fd()))
+	if isTerm {
+		return "", errs.Wrap(ErrMainTermStdin)
+	}
+	// パイプの標準入力を文字列化する。
+	sb := new(strings.Builder)
+	stdin := bufio.NewReader(os.Stdin)
+	if _, err := io.Copy(sb, stdin); err != nil {
+		err = errs.Wrap(ErrMainStdinRead, errs.WithCause(err))
+		return "", err
+	}
+	return sb.String(), nil
 }
 
 // メールの組み立て
@@ -104,8 +138,8 @@ func BuildMail() (*Mail, error) {
 	config := GetConfigInstance()
 	mail := NewMail()
 	mail.Subject = config.Subject
-	mail.Body = "Body Body Body\nBody Body Body"
-	if err := mail.SetFrom(config.Subject); err != nil {
+	mail.Body = config.Body
+	if err := mail.SetFrom(config.From); err != nil {
 		return nil, err
 	}
 	if err := mail.SetRecipients(config.Recipients...); err != nil {

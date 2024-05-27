@@ -28,6 +28,8 @@ type (
 		Recipients []string
 		// 件名
 		Subject string
+		// 本文
+		Body string
 		// ヘルプの表示が必要か？
 		IsHelpRequested bool
 		// バージョンの表示が必要か？
