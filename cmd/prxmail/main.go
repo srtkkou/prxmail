@@ -12,5 +12,5 @@ var (
 )
 
 func main() {
-	os.Exit(app.AppMain(os.Args, Revision))
+	os.Exit(app.AppMain(Revision))
 }

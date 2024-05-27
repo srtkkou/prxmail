@@ -30,7 +30,7 @@ var (
 	ErrMainSmtpSendMail = errors.New("prxmail.main.ErrMainSmtpSendMail")
 )
 
-func AppMain(args []string, revision string) (code int) {
+func AppMain(revision string) (code int) {
 	var err error
 	// 設定の初期化
 	config := GetConfigInstance()
