@@ -1,0 +1,12 @@
+host = 'smtp.example.com'
+port = '25'
+username = 'admin@example.com'
+password = 'password'
+
+# 拒否アドレス群
+discard_from = [
+  '/bad\.com/',
+  '/worse\.com/',
+  '/worst\.com/',
+]
+
