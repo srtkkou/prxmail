@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/goark/errs"
-	"github.com/joho/godotenv"
 	"github.com/spf13/pflag"
 	"golang.org/x/term"
 )
@@ -33,12 +32,12 @@ var (
 func AppMain(revision string) (code int) {
 	var err error
 	// 設定の初期化
-	config := GetConfigInstance()
-	config.Revision = revision
-	if err = config.LoadExePath(); err != nil {
+	config, err := LoadConfig(revision)
+	if err != nil {
 		ErrorLog(err)
 		return -1
 	}
+	config.Revision = revision
 	// ロガーの初期化
 	SetupLogger()
 	// フラグの解析
@@ -57,17 +56,6 @@ func AppMain(revision string) (code int) {
 		fmt.Printf("prxmail %s\n", config.VersionInfo())
 		return 0
 	}
-	// 環境変数ファイルの読み込み
-	if err = godotenv.Load(config.EnvPath()); err != nil {
-		err = errs.Wrap(ErrMainDotenvLoad, errs.WithCause(err))
-		ErrorLog(err)
-		return -1
-	}
-	// 環境変数の読み込み
-	config.Host = os.Getenv("HOST")
-	config.Port = os.Getenv("PORT")
-	config.Username = os.Getenv("USERNAME")
-	config.Password = os.Getenv("PASSWORD")
 	// パイプの読み込み
 	config.Body, err = ReadPipe()
 	if err != nil {
