@@ -25,7 +25,10 @@ go.work
 .env.*
 *.env
 *.env.*
-!*.env.example
+
+# Config file
+prxmail.toml
+!prxmail.toml.sample
 
 # Log
 *.log
