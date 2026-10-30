@@ -5,86 +5,58 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/smtp"
 	"os"
 	"strings"
 
 	"github.com/goark/errs"
-	"github.com/spf13/pflag"
 	"golang.org/x/term"
 )
 
 var (
-	// バージョン
-	Version = "v0.0.1"
 	// envファイルロードエラー
-	ErrMainDotenvLoad = errors.New("prxmail.main.ErrMainDotenvLoad")
+	ErrMainDotenvLoad = errors.New("main.ErrMainDotenvLoad")
 	// 引数解析エラー
-	ErrMainArgs = errors.New("prxmail.main.ErrMainArgs")
+	ErrMainArgs = errors.New("main.ErrMainArgs")
 	// ターミナルの標準入力は受け付けない
-	ErrMainTermStdin = errors.New("prxmail.main.ErrMainTermStdin")
+	ErrMainTermStdin = errors.New("main.ErrMainTermStdin")
 	// 標準入力読み込みエラー
-	ErrMainStdinRead = errors.New("prxmail.main.ErrMainStdinRead")
+	ErrMainStdinRead = errors.New("main.ErrMainStdinRead")
 	// SMTPメール送信エラー
-	ErrMainSmtpSendMail = errors.New("prxmail.main.ErrMainSmtpSendMail")
+	ErrMainSmtpSendMail = errors.New("main.ErrMainSmtpSendMail")
 )
 
-func AppMain(revision string) (code int) {
-	var err error
-	// 設定の初期化
-	config, err := LoadConfig(revision)
+// 処理の実行
+func AppMain() (code int) {
+	// 設定ファイルの読み込み
+	config := Config()
+	err := config.LoadConfig()
 	if err != nil {
 		ErrorLog(err)
 		return -1
 	}
-	config.Revision = revision
 	// ロガーの初期化
 	SetupLogger()
-	// フラグの解析
-	if err = ParseFlags(); err != nil {
-		err = errs.Wrap(ErrMainArgs, errs.WithCause(err))
-		ErrorLog(err)
-		return -1
-	}
-	// ヘルプの表示
-	if config.IsHelpRequested {
-		pflag.PrintDefaults()
-		return 0
-	}
-	// バージョンの表示
-	if config.IsVersionRequested {
-		fmt.Printf("prxmail %s\n", config.VersionInfo())
-		return 0
-	}
 	// パイプの読み込み
-	config.Body, err = ReadPipe()
+	body, err := readPipe()
 	if err != nil {
 		ErrorLog(err)
 		return -1
 	}
-	if len(config.Body) == 0 {
+	config.SetBody(body)
+	if len(config.Body()) == 0 {
 		fmt.Println("パイプからメール本文を設定してください。")
 		return 0
 	}
 	// アプリケーション情報の記録
-	Logger.Info().Str("version", config.Version).
-		Str("revision", config.Revision).
-		Str("host", config.Host).
-		Str("port", config.Port).
-		Str("username", config.Username).
-		Str("password", config.LogPassword()).
-		Str("from", config.From).
-		Strs("to", config.Recipients).
-		Str("subject", config.Subject).
-		Msg("start")
+	Logger.Info().Msg(config.String())
 	// メールの組み立て
-	mail, err := BuildMail()
+	mail, err := buildMail()
 	if err != nil {
 		ErrorLog(err)
 		return -1
 	}
 	// メールの送信
-	if err := Send(mail); err != nil {
+	if err := sendMail(mail); err != nil {
 		ErrorLog(err)
 		return -1
 	}
@@ -92,7 +64,7 @@ func AppMain(revision string) (code int) {
 }
 
 // パイプの読み込み
-func ReadPipe() (string, error) {
+func readPipe() (string, error) {
 	// ターミナル入力の場合は処理しない。
 	isTerm := term.IsTerminal(int(os.Stdin.Fd()))
 	if isTerm {
@@ -109,46 +81,17 @@ func ReadPipe() (string, error) {
 }
 
 // メールの組み立て
-func BuildMail() (*Mail, error) {
-	config := GetConfigInstance()
+func buildMail() (*Mail, error) {
+	config := Config()
 	mail := NewMail()
-	mail.Subject = config.Subject
-	mail.Body = config.Body
-	if err := mail.SetFrom(config.From); err != nil {
+	mail.Subject = config.Subject()
+	mail.Body = config.Body()
+	if err := mail.SetFrom(config.From()); err != nil {
 		return nil, err
 	}
-	if err := mail.SetRecipients(config.Recipients...); err != nil {
+	addrs := config.Recipients()
+	if err := mail.SetRecipients(addrs...); err != nil {
 		return nil, err
 	}
 	return mail, nil
-}
-
-// メールの送信
-func Send(mail *Mail) (err error) {
-	logMsg := "prxmail.main.Send()"
-	config := GetConfigInstance()
-	// メッセージの取得
-	message, err := mail.Message()
-	if err != nil {
-		return err
-	}
-	fmt.Println(message)
-	// メールの送信
-	err = smtp.SendMail(
-		config.HostWithPort(),
-		NewPlainOrLoginAuth(),
-		mail.From(),
-		mail.Recipients(),
-		[]byte(message),
-	)
-	if err != nil {
-		return errs.Wrap(ErrMainSmtpSendMail, errs.WithCause(err),
-			errs.WithContext("host", config.HostWithPort()),
-			errs.WithContext("from", mail.From()),
-			errs.WithContext("to", mail.Recipients()),
-			errs.WithContext("message", message),
-		)
-	}
-	Logger.Info().Str("Message", message).Msg(logMsg)
-	return nil
 }
