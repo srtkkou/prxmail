@@ -41,7 +41,27 @@ func AppMain() (code int) {
 	}
 	config.SetBody(body)
 	// アプリケーション情報の記録
-	Log().Info(logMsg, slog.String("config", config.String()))
+	Log().Info(logMsg,
+		slog.Group("config",
+			slog.String("version", config.Version()),
+			slog.String("commitHash", config.CommitHash()),
+			slog.Time("commitAt", config.CommitAt()),
+			slog.String("exePath", config.ExePath()),
+			slog.String("host", config.Host()),
+			slog.String("smtpHost", config.SMTPHost()),
+			slog.Int("smtpPort", config.SMTPPort()),
+			slog.String("username", config.Username()),
+			slog.String("password", config.MaskedPassword()),
+			slog.String("username", config.Username()),
+			slog.String("discardFrom",
+				strings.Join(config.DiscardFrom(), ",")),
+			slog.String("from", config.From()),
+			slog.String("recipients",
+				strings.Join(config.Recipients(), ",")),
+			slog.String("subject", config.Subject()),
+			slog.String("body", config.Body()),
+		),
+	)
 	// メールの組み立て
 	mail, err := buildMail()
 	if err != nil {

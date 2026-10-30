@@ -82,55 +82,6 @@ func Config() *AppConfig {
 	return configPtr
 }
 
-// 文字列化
-func (c *AppConfig) String() string {
-	c.mtx.RLock()
-	defer c.mtx.RUnlock()
-	var sb strings.Builder
-	sb.WriteString(`{"type":"AppConfig"`)
-	sb.WriteString(`,"version":`)
-	sb.WriteString(strconv.Quote(c.version))
-	sb.WriteString(`,"commitHash":`)
-	sb.WriteString(strconv.Quote(c.commitHash))
-	sb.WriteString(`,"commitAt":`)
-	sb.WriteString(strconv.Quote(
-		c.commitAt.Format(time.RFC3339Nano)))
-	sb.WriteString(`,"exePath":`)
-	sb.WriteString(strconv.Quote(c.exePath))
-	sb.WriteString(`,"host":`)
-	sb.WriteString(strconv.Quote(c.host))
-	sb.WriteString(`,"smtpHost":`)
-	sb.WriteString(strconv.Quote(c.smtpHost))
-	sb.WriteString(`,"smtpPort":`)
-	sb.WriteString(strconv.Itoa(c.smtpPort))
-	sb.WriteString(`,"username":`)
-	sb.WriteString(strconv.Quote(c.username))
-	sb.WriteString(`,"password":`)
-	sb.WriteString(strconv.Quote(c.LogPassword()))
-	sb.WriteString(`,"discardFrom":[`)
-	for i, addr := range c.discardFrom {
-		if i > 0 {
-			sb.WriteString(`,`)
-		}
-		sb.WriteString(strconv.Quote(addr))
-	}
-	sb.WriteString(`],"from":`)
-	sb.WriteString(strconv.Quote(c.from))
-	sb.WriteString(`,"recipients":[`)
-	for i, addr := range c.recipients {
-		if i > 0 {
-			sb.WriteString(`,`)
-		}
-		sb.WriteString(strconv.Quote(addr))
-	}
-	sb.WriteString(`],"subject":`)
-	sb.WriteString(strconv.Quote(c.subject))
-	sb.WriteString(`],"body":`)
-	sb.WriteString(strconv.Quote(c.body))
-	sb.WriteString(`}`)
-	return sb.String()
-}
-
 // 設定ファイルの読み取り
 func (c *AppConfig) LoadConfig() (err error) {
 	// 実行ファイルパスの更新
@@ -211,14 +162,14 @@ func (c *AppConfig) Host() string {
 func (c *AppConfig) SetSMTPHost(str string) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	c.host = str
+	c.smtpHost = str
 }
 
 // SMTPホスト名の取得
 func (c *AppConfig) SMTPHost() string {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
-	return c.host
+	return c.smtpHost
 }
 
 // SMTPポート番号の更新
@@ -348,8 +299,8 @@ func (c *AppConfig) ConfigFilePath() string {
 	return filepath.Join(c.ExeDir(), "prxmail.toml")
 }
 
-// ログ出力するパスワード
-func (c *AppConfig) LogPassword() string {
+// ログ用にマスクしたパスワード
+func (c *AppConfig) MaskedPassword() string {
 	pw := c.Password()
 	size := len(pw)
 	// 2文字以内の場合はすべてマスクする。
