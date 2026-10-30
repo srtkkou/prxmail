@@ -1,5 +1,5 @@
 host = 'smtp.example.com'
-port = '25'
+port = 25
 username = 'admin@example.com'
 password = 'password'
 
