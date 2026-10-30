@@ -33,7 +33,7 @@ func sendMail(mail *Mail) (err error) {
 		[]byte(message),
 	)
 	if err != nil {
-		return errs.Wrap(ErrMainSmtpSendMail, errs.WithCause(err),
+		return errs.Wrap(ErrSMTPSendMail, errs.WithCause(err),
 			errs.WithContext("host", config.SMTPHostWithPort()),
 			errs.WithContext("from", mail.From()),
 			errs.WithContext("to", mail.Recipients()),

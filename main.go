@@ -14,16 +14,10 @@ import (
 )
 
 var (
-	// envファイルロードエラー
-	ErrMainDotenvLoad = errors.New("main.ErrMainDotenvLoad")
-	// 引数解析エラー
-	ErrMainArgs = errors.New("main.ErrMainArgs")
 	// ターミナルの標準入力は受け付けない
 	ErrMainTermStdin = errors.New("main.ErrMainTermStdin")
 	// 標準入力読み込みエラー
 	ErrMainStdinRead = errors.New("main.ErrMainStdinRead")
-	// SMTPメール送信エラー
-	ErrMainSmtpSendMail = errors.New("main.ErrMainSmtpSendMail")
 )
 
 // 処理の実行
