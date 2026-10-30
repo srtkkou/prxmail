@@ -18,6 +18,8 @@ var (
 	ErrMainTermStdin = errors.New("main.ErrMainTermStdin")
 	// 標準入力読み込みエラー
 	ErrMainStdinRead = errors.New("main.ErrMainStdinRead")
+	// 本文が空
+	ErrMainBodyEmpty = errors.New("main.ErrMainBodyEmpty")
 )
 
 // 処理の実行
@@ -33,14 +35,11 @@ func AppMain() (code int) {
 	// パイプの読み込み
 	body, err := readPipe()
 	if err != nil {
+		fmt.Println("パイプからメール本文を設定してください。")
 		Log().Errorf(err)
 		return -1
 	}
 	config.SetBody(body)
-	if len(config.Body()) == 0 {
-		fmt.Println("パイプからメール本文を設定してください。")
-		return 0
-	}
 	// アプリケーション情報の記録
 	Log().Info(logMsg, slog.String("config", config.String()))
 	// メールの組み立て
@@ -59,6 +58,7 @@ func AppMain() (code int) {
 
 // パイプの読み込み
 func readPipe() (string, error) {
+	var err error
 	// ターミナル入力の場合は処理しない。
 	isTerm := term.IsTerminal(int(os.Stdin.Fd()))
 	if isTerm {
@@ -67,11 +67,16 @@ func readPipe() (string, error) {
 	// パイプの標準入力を文字列化する。
 	sb := new(strings.Builder)
 	stdin := bufio.NewReader(os.Stdin)
-	if _, err := io.Copy(sb, stdin); err != nil {
+	if _, err = io.Copy(sb, stdin); err != nil {
 		err = errs.Wrap(ErrMainStdinRead, errs.WithCause(err))
 		return "", err
 	}
-	return sb.String(), nil
+	// 文字列が空か確認する。
+	if sb.Len() == 0 {
+		err = errs.Wrap(ErrMainBodyEmpty)
+		return "", err
+	}
+	return sb.String(), err
 }
 
 // メールの組み立て
