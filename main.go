@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -27,19 +28,18 @@ var (
 
 // 処理の実行
 func AppMain() (code int) {
+	logMsg := "AppMain()"
 	// 設定ファイルの読み込み
 	config := Config()
 	err := config.LoadConfig()
 	if err != nil {
-		ErrorLog(err)
+		Log().Errorf(err)
 		return -1
 	}
-	// ロガーの初期化
-	SetupLogger()
 	// パイプの読み込み
 	body, err := readPipe()
 	if err != nil {
-		ErrorLog(err)
+		Log().Errorf(err)
 		return -1
 	}
 	config.SetBody(body)
@@ -48,16 +48,16 @@ func AppMain() (code int) {
 		return 0
 	}
 	// アプリケーション情報の記録
-	Logger.Info().Msg(config.String())
+	Log().Info(logMsg, slog.String("config", config.String()))
 	// メールの組み立て
 	mail, err := buildMail()
 	if err != nil {
-		ErrorLog(err)
+		Log().Errorf(err)
 		return -1
 	}
 	// メールの送信
 	if err := sendMail(mail); err != nil {
-		ErrorLog(err)
+		Log().Errorf(err)
 		return -1
 	}
 	return 0

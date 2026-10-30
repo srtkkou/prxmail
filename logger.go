@@ -1,20 +1,23 @@
 package prxmail
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"log"
+	"log/slog"
 	"os"
+	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/goark/errs"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-type (
-	// ロガー
-	AppLogger struct {
-		zerolog.Logger
-	}
-)
+// ロガー
+type AppLogger struct {
+	slog.Logger
+	level *slog.LevelVar // ログレベル
+}
 
 const (
 	// ログファイルのローテーションサイズ(MB)
@@ -24,36 +27,60 @@ const (
 )
 
 var (
-	// ロガーのインスタンス
-	Logger *AppLogger
+	// ロガー初期化排他
+	logOnce sync.Once
+	// ロガーへのポインタ
+	appLoggerPtr *AppLogger
 )
 
-func init() {
+var (
+	ErrLoggerFileOpen  = errors.New("lib.ErrLoggerFileOpen")
+	ErrLoggerFileClose = errors.New("lib.ErrLoggerFileClose")
+)
+
+func Log() *AppLogger {
 	// ロガーの初期化
-	Logger = &AppLogger{
-		Logger: zerolog.New(os.Stdout).With().Timestamp().Logger(),
-	}
+	logOnce.Do(func() {
+		var writer io.Writer
+		config := Config()
+		// ログファイルの新規作成
+		logPath := config.LogPath()
+		f, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			err = errs.Wrap(ErrLoggerFileOpen, errs.WithCause(err),
+				errs.WithContext("path", logPath))
+			log.Fatalf("%+v\n", err)
+		}
+		if err = f.Close(); err != nil {
+			err = errs.Wrap(ErrLoggerFileClose, errs.WithCause(err),
+				errs.WithContext("path", logPath))
+			log.Fatalf("%+v\n", err)
+		}
+		// ログファイルのローテーション設定
+		fileWriter := &lumberjack.Logger{
+			Filename:   logPath,
+			MaxSize:    LOG_MAX_SIZE,
+			MaxBackups: LOG_MAX_BACKUPS,
+		}
+		writer = io.MultiWriter(fileWriter, os.Stdout)
+		// インスタンスの初期化
+		appLogger := AppLogger{
+			level: new(slog.LevelVar),
+		}
+		// レベルの設定
+		appLogger.level.Set(slog.LevelInfo)
+		// slogの初期化
+		slogHandler := slog.NewJSONHandler(writer,
+			&slog.HandlerOptions{Level: appLogger.level})
+		slogLogger := slog.New(slogHandler)
+		appLogger.Logger = *slogLogger
+		appLoggerPtr = &appLogger
+	})
+	return appLoggerPtr
 }
 
-// ログ出力先の設定
-func SetupLogger() {
-	// 設定の取得
-	config := Config()
-	// ログファイルの設定
-	fileWriter := &lumberjack.Logger{
-		Filename:   config.LogPath(),
-		MaxSize:    LOG_MAX_SIZE,
-		MaxBackups: LOG_MAX_BACKUPS,
-	}
-	writer := io.MultiWriter(fileWriter, os.Stdout)
-	// ロガーの出力先の変更
-	Logger = &AppLogger{
-		Logger: Logger.Output(writer),
-	}
-}
-
-// エラーの出力
-func ErrorLog(err error) {
-	errStr := fmt.Sprintf("%+v", err)
-	Logger.Error().RawJSON("error", []byte(errStr)).Msg("")
+// エラーログの出力
+func (l *AppLogger) Errorf(err error) {
+	msg := fmt.Sprintf("%+v", err)
+	l.Error(msg)
 }

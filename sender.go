@@ -3,6 +3,7 @@ package prxmail
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/smtp"
 
 	"github.com/goark/errs"
@@ -15,7 +16,7 @@ var (
 
 // メールの送信
 func sendMail(mail *Mail) (err error) {
-	logMsg := "prxmail.sendMail()"
+	logMsg := "sender.sendMail()"
 	config := Config()
 	// メッセージの取得
 	message, err := mail.Message()
@@ -39,6 +40,6 @@ func sendMail(mail *Mail) (err error) {
 			errs.WithContext("message", message),
 		)
 	}
-	Logger.Info().Str("Message", message).Msg(logMsg)
+	Log().Info(logMsg, slog.String("Message", message))
 	return nil
 }
