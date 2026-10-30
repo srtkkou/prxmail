@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goark/errs"
 	"github.com/pelletier/go-toml/v2"
@@ -20,6 +21,7 @@ type AppConfig struct {
 	ctx         context.Context // コンテキスト
 	version     string          // バージョン
 	commitHash  string          // コミットハッシュ
+	commitAt    time.Time       // コミット日時
 	exePath     string          // 実行ファイルのパス
 	host        string          // ホスト名
 	smtpHost    string          // SMTPホスト名
@@ -41,6 +43,11 @@ type configTomlStructure struct {
 	Password    string   // SASL Authパスワード
 	DiscardFrom []string // 拒否Fromアドレス
 }
+
+const (
+	// コミット日時の形式
+	commitAtLayout = "20060102-150405"
+)
 
 var (
 	// 設定初期化排他
@@ -85,6 +92,9 @@ func (c *AppConfig) String() string {
 	sb.WriteString(strconv.Quote(c.version))
 	sb.WriteString(`,"commitHash":`)
 	sb.WriteString(strconv.Quote(c.commitHash))
+	sb.WriteString(`,"commitAt":`)
+	sb.WriteString(strconv.Quote(
+		c.commitAt.Format(time.RFC3339Nano)))
 	sb.WriteString(`,"exePath":`)
 	sb.WriteString(strconv.Quote(c.exePath))
 	sb.WriteString(`,"host":`)
@@ -164,6 +174,23 @@ func (c *AppConfig) CommitHash() string {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
 	return c.commitHash
+}
+
+// コミット日時の更新
+func (c *AppConfig) SetCommitAt(str string) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	tm, err := time.Parse(commitAtLayout, str)
+	if err == nil {
+		c.commitAt = tm
+	}
+}
+
+// コミット日時の取得
+func (c *AppConfig) CommitAt() time.Time {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
+	return c.commitAt
 }
 
 // 実行ファイルパスの取得

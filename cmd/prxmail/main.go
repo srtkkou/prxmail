@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/pflag"
 
@@ -28,6 +29,8 @@ const (
 var (
 	// コミットハッシュ
 	CommitHash string
+	// コミット日時
+	CommitAt string
 )
 
 func main() {
@@ -36,6 +39,7 @@ func main() {
 	// 設定の更新
 	config.SetVersion(VERSION)
 	config.SetCommitHash(CommitHash)
+	config.SetCommitAt(CommitAt)
 	// フラグの設定
 	cmd := &appCmd{
 		fs: pflag.NewFlagSet("app", pflag.ExitOnError),
@@ -73,8 +77,10 @@ func (c *appCmd) usage() {
 	config := app.Config()
 	fmt.Printf("usage: %s <options>\n", COMMAND)
 	fmt.Println()
-	fmt.Printf("version: %s (build:%s)\n",
-		config.Version(), config.CommitHash())
+	fmt.Printf("version: %s\n", config.Version())
+	fmt.Printf("commit: %s\n",
+		config.CommitAt().Format(time.RFC3339))
+	fmt.Printf("        %s\n", config.CommitHash())
 	fmt.Println()
 	fmt.Println(`Use pipe to set mail body.`)
 	fmt.Println()

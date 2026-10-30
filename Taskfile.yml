@@ -40,12 +40,14 @@ tasks:
   build:
     deps: [staticcheck]
     cmds:
-      - go build -ldflags "-X main.Revision={{.COMMIT_HASH}}" -o prxmail.exe cmd/prxmail/main.go
+      - go build -ldflags "-X main.CommitHash={{.COMMIT_HASH}} -X main.CommitAt={{.COMMIT_AT}}" -o prxmail.exe cmd/prxmail/main.go
     env:
       CGO_ENABLED: 0
     vars:
       COMMIT_HASH:
         sh: git rev-parse HEAD
+      COMMIT_AT:
+        sh: git log -1 --pretty=format:%ad --date=format:"%Y%m%d-%H%M%S"
     sources:
       - go.mod
       - go.sum
