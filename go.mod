@@ -5,7 +5,6 @@ go 1.27
 require (
 	github.com/goark/errs v1.3.2
 	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/rs/zerolog v1.34.0
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/term v0.46.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
