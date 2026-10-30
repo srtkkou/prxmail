@@ -1,5 +1,8 @@
 version: '3'
 
+includes:
+  build: ./Taskfile_{{OS}}.yml
+
 tasks:
   default:
     cmds:
@@ -24,20 +27,32 @@ tasks:
     cmds:
       - go vet ./...
 
-  staticcheck:
+  fix:
     deps: [vet]
     cmds:
-      - staticcheck ./...
+      - go fix ./...
+
+  staticcheck:
+    deps: [fix]
+    cmds:
+      - go tool staticcheck ./...
 
   build:
     deps: [staticcheck]
     cmds:
-      - go build -ldflags "-X main.Revision={{.GIT_HASH}}" -o prxmail.exe cmd/prxmail/main.go
+      - go build -ldflags "-X main.Revision={{.COMMIT_HASH}}" -o prxmail.exe cmd/prxmail/main.go
     env:
       CGO_ENABLED: 0
-      GOOS: linux
-      GOARCH: amd64
     vars:
-      GIT_HASH:
+      COMMIT_HASH:
         sh: git rev-parse HEAD
+    sources:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+    generates:
+      - prxmail.exe
 
+  clean:
+    cmds:
+      - rm -f prxmail.exe
