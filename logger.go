@@ -38,7 +38,7 @@ func init() {
 // ログ出力先の設定
 func SetupLogger() {
 	// 設定の取得
-	config := GetConfigInstance()
+	config := Config()
 	// ログファイルの設定
 	fileWriter := &lumberjack.Logger{
 		Filename:   config.LogPath(),

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/smtp"
 	"slices"
+	"strconv"
 
 	"github.com/goark/errs"
 )
@@ -23,21 +24,21 @@ type (
 
 var (
 	// ホスト名が一致していない。
-	ErrAuthHostMatch = errors.New("prxmail.auth.ErrAuthHostMatch")
+	ErrAuthHostMatch = errors.New("auth.ErrAuthHostMatch")
 	// PLAIN認証で認証情報を送信済みなのにさらに情報を求められた。
-	ErrAuthPlainChallenge = errors.New("prxmail.auth.ErrAuthPlainChallenge")
+	ErrAuthPlainChallenge = errors.New("auth.ErrAuthPlainChallenge")
 	// LOGIN認証のサーバからの要求が不正
-	ErrAuthLoginChallenge = errors.New("prxmail.auth.ErrAuthLoginChallenge")
+	ErrAuthLoginChallenge = errors.New("auth.ErrAuthLoginChallenge")
 )
 
 // PLAIN/LOGIN認証の初期化
 func NewPlainOrLoginAuth() smtp.Auth {
-	config := GetConfigInstance()
+	config := Config()
 	return &plainOrLoginAuth{
-		username: config.Username,
-		password: config.Password,
-		host:     config.Host,
-		port:     config.Port,
+		username: config.Username(),
+		password: config.Password(),
+		host:     config.SMTPHost(),
+		port:     strconv.Itoa(config.SMTPPort()),
 	}
 }
 
