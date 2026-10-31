@@ -24,24 +24,23 @@ var (
 
 // 処理の実行
 func AppMain() (code int) {
-	logMsg := "AppMain()"
 	// 設定ファイルの読み込み
 	config := Config()
 	err := config.LoadConfig()
 	if err != nil {
-		Log().Errorf(err)
+		Log().Errorf("config.LoadConfig()", err)
 		return -1
 	}
 	// パイプの読み込み
 	body, err := readPipe()
 	if err != nil {
 		fmt.Println("パイプからメール本文を設定してください。")
-		Log().Errorf(err)
+		Log().Errorf("main.readPipe()", err)
 		return -1
 	}
 	config.SetBody(body)
 	// アプリケーション情報の記録
-	Log().Info(logMsg,
+	Log().Info("main.AppMain()",
 		slog.Group("config",
 			slog.String("version", config.Version()),
 			slog.String("commitHash", config.CommitHash()),
@@ -65,12 +64,12 @@ func AppMain() (code int) {
 	// メールの組み立て
 	mail, err := buildMail()
 	if err != nil {
-		Log().Errorf(err)
+		Log().Errorf("main.buildMail", err)
 		return -1
 	}
 	// メールの送信
 	if err := sendMail(mail); err != nil {
-		Log().Errorf(err)
+		Log().Errorf("sender.sendMail", err)
 		return -1
 	}
 	return 0

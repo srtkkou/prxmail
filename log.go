@@ -1,6 +1,7 @@
 package prxmail
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -80,7 +81,8 @@ func Log() *AppLogger {
 }
 
 // エラーログの出力
-func (l *AppLogger) Errorf(err error) {
-	msg := fmt.Sprintf("%+v", err)
-	l.Error(msg)
+func (l *AppLogger) Errorf(msg string, err error) {
+	str := fmt.Sprintf("%+v", err)
+	rawJSON := json.RawMessage([]byte(str))
+	l.Error(msg, slog.Any("error", rawJSON))
 }
