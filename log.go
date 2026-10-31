@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -42,7 +41,6 @@ var (
 func Log() *AppLogger {
 	// ロガーの初期化
 	logOnce.Do(func() {
-		var writer io.Writer
 		config := Config()
 		// ログファイルの新規作成
 		logPath := config.LogPath()
@@ -58,12 +56,11 @@ func Log() *AppLogger {
 			log.Fatalf("%+v\n", err)
 		}
 		// ログファイルのローテーション設定
-		fileWriter := &lumberjack.Logger{
+		writer := &lumberjack.Logger{
 			Filename:   logPath,
 			MaxSize:    LOG_MAX_SIZE,
 			MaxBackups: LOG_MAX_BACKUPS,
 		}
-		writer = io.MultiWriter(fileWriter, os.Stdout)
 		// インスタンスの初期化
 		appLogger := AppLogger{
 			level: new(slog.LevelVar),
@@ -84,5 +81,6 @@ func Log() *AppLogger {
 func (l *AppLogger) Errorf(msg string, err error) {
 	str := fmt.Sprintf("%+v", err)
 	rawJSON := json.RawMessage([]byte(str))
+	fmt.Fprintln(os.Stderr, str)
 	l.Error(msg, slog.Any("error", rawJSON))
 }

@@ -2,7 +2,6 @@ package prxmail
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/smtp"
 
@@ -23,7 +22,6 @@ func sendMail(mail *Mail) (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println(message)
 	// メールの送信
 	err = smtp.SendMail(
 		config.SMTPHostWithPort(),
