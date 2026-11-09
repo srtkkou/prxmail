@@ -34,30 +34,30 @@ func AppMain() (code int) {
 	config := lib.Config()
 	err := config.LoadConfig()
 	if err != nil {
-		lib.Log().Errorf("config.LoadConfig()", err)
+		lib.ErrorLog("config.LoadConfig()", err)
 		return -1
 	}
 	// パイプの読み込み
 	body, err := readPipe()
 	if err != nil {
 		fmt.Println("パイプからメール本文を設定してください。")
-		lib.Log().Errorf("main.readPipe()", err)
+		lib.ErrorLog("main.readPipe()", err)
 		return -1
 	}
 	config.SetBody(body)
 	// アプリケーション情報の記録
 	configBlob, _ := config.MarshalJSON()
 	jsonBlob := json.RawMessage(configBlob)
-	lib.Log().Info("main.AppMain()", slog.Any("config", jsonBlob))
+	lib.InfoLog("main.AppMain()", slog.Any("config", jsonBlob))
 	// メールの組み立て
 	mail, err := buildMail()
 	if err != nil {
-		lib.Log().Errorf("main.buildMail", err)
+		lib.ErrorLog("main.buildMail", err)
 		return -1
 	}
 	// メールの送信
 	if err := lib.SendMail(mail); err != nil {
-		lib.Log().Errorf("sender.sendMail", err)
+		lib.ErrorLog("sender.sendMail", err)
 		return -1
 	}
 	return 0

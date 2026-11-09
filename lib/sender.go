@@ -41,6 +41,6 @@ func SendMail(mail *Mail) (err error) {
 			errs.WithContext("message", message),
 		)
 	}
-	Log().Info(logMsg, slog.String("Message", message))
+	InfoLog(logMsg, slog.String("Message", message))
 	return nil
 }

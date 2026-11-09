@@ -18,7 +18,7 @@ import (
 
 // ロガー
 type AppLogger struct {
-	slog.Logger
+	base  slog.Logger
 	level *slog.LevelVar // ログレベル
 }
 
@@ -41,7 +41,26 @@ var (
 	ErrLoggerFileClose = errors.New("lib.ErrLoggerFileClose")
 )
 
-func Log() *AppLogger {
+// DEBUGログの出力
+func DebugLog(msg string, args ...any) {
+	printLog(slog.LevelDebug, msg, args...)
+}
+
+// INFOログの出力
+func InfoLog(msg string, args ...any) {
+	printLog(slog.LevelInfo, msg, args...)
+}
+
+// ERRORログの出力
+func ErrorLog(msg string, err error) {
+	str := fmt.Sprintf("%+v", err)
+	jsonBlob := json.RawMessage([]byte(str))
+	fmt.Fprintln(os.Stderr, str)
+	printLog(slog.LevelError, msg, slog.Any("error", jsonBlob))
+}
+
+// ロガーの取得
+func logger() *AppLogger {
 	// ロガーの初期化
 	logOnce.Do(func() {
 		config := Config()
@@ -74,16 +93,14 @@ func Log() *AppLogger {
 		slogHandler := slog.NewJSONHandler(writer,
 			&slog.HandlerOptions{Level: appLogger.level})
 		slogLogger := slog.New(slogHandler)
-		appLogger.Logger = *slogLogger
+		appLogger.base = *slogLogger
 		appLoggerPtr = &appLogger
 	})
 	return appLoggerPtr
 }
 
-// エラーログの出力
-func (l *AppLogger) Errorf(msg string, err error) {
-	str := fmt.Sprintf("%+v", err)
-	rawJSON := json.RawMessage([]byte(str))
-	fmt.Fprintln(os.Stderr, str)
-	l.Error(msg, slog.Any("error", rawJSON))
+// ログの出力
+func printLog(level slog.Level, msg string, args ...any) {
+	ctx := Config().Context()
+	logger().base.Log(ctx, level, msg, args...)
 }
