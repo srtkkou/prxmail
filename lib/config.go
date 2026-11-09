@@ -4,8 +4,10 @@ Copyright © 2024 srtkkou <srtkkou@outlook.jp>
 package lib
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -100,6 +102,49 @@ func (c *AppConfig) LoadConfig() (err error) {
 		return err
 	}
 	return nil
+}
+
+func (c *AppConfig) MarshalJSON() ([]byte, error) {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
+	var b bytes.Buffer
+	fmt.Fprintf(&b, `{"version":%q`, c.version)
+	fmt.Fprintf(&b, `,"commitHash":%q`, c.commitHash)
+	fmt.Fprintf(&b, `,"commitAt":%q`,
+		c.commitAt.Format(time.RFC3339))
+	fmt.Fprintf(&b, `,"exePath":%q`, c.exePath)
+	fmt.Fprintf(&b, `,"host":%q`, c.host)
+	fmt.Fprintf(&b, `,"smtpHost":%q`, c.smtpHost)
+	fmt.Fprintf(&b, `,"smtpPort":%d`, c.smtpPort)
+	fmt.Fprintf(&b, `,"username":%q`, c.username)
+	maskedPassword := maskPassword(c.password)
+	fmt.Fprintf(&b, `,"password":%q`, maskedPassword)
+	fmt.Fprintf(&b, `,"discardFrom":[`)
+	if len(c.discardFrom) > 0 {
+		for _, addr := range c.discardFrom {
+			fmt.Fprintf(&b, `%q,`, addr)
+		}
+		b.Truncate(b.Len() - 1)
+	}
+	fmt.Fprintf(&b, `],"from":%q`, c.from)
+	fmt.Fprintf(&b, `,"recipients":[`)
+	if len(c.recipients) > 0 {
+		for _, addr := range c.recipients {
+			fmt.Fprintf(&b, `%q,`, addr)
+		}
+		b.Truncate(b.Len() - 1)
+	}
+	fmt.Fprintf(&b, `],"subject":%q`, c.subject)
+	fmt.Fprintf(&b, `,"body":%q`, c.body)
+	fmt.Fprintf(&b, `}`)
+	return b.Bytes(), nil
+}
+
+// コンテキストの取得
+func (c *AppConfig) Context() context.Context {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
+	return c.ctx
 }
 
 // バージョンの更新
@@ -317,6 +362,17 @@ func (c *AppConfig) MaskedPassword() string {
 // ポート番号付きホスト名
 func (c *AppConfig) SMTPHostWithPort() string {
 	return net.JoinHostPort(c.SMTPHost(), strconv.Itoa(c.SMTPPort()))
+}
+
+// ログ用にパスワードをマスクする。
+func maskPassword(pw string) string {
+	size := len(pw)
+	// 2文字以内の場合はすべてマスクする。
+	if size <= 2 {
+		return strings.Repeat("*", size)
+	}
+	// その他の場合、最初の2文字以外をマスクする。
+	return pw[0:2] + strings.Repeat("*", (size-2))
 }
 
 // 実行ファイルパスの設定

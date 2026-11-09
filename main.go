@@ -5,6 +5,7 @@ package prxmail
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -45,27 +46,9 @@ func AppMain() (code int) {
 	}
 	config.SetBody(body)
 	// アプリケーション情報の記録
-	lib.Log().Info("main.AppMain()",
-		slog.Group("config",
-			slog.String("version", config.Version()),
-			slog.String("commitHash", config.CommitHash()),
-			slog.Time("commitAt", config.CommitAt()),
-			slog.String("exePath", config.ExePath()),
-			slog.String("host", config.Host()),
-			slog.String("smtpHost", config.SMTPHost()),
-			slog.Int("smtpPort", config.SMTPPort()),
-			slog.String("username", config.Username()),
-			slog.String("password", config.MaskedPassword()),
-			slog.String("username", config.Username()),
-			slog.String("discardFrom",
-				strings.Join(config.DiscardFrom(), ",")),
-			slog.String("from", config.From()),
-			slog.String("recipients",
-				strings.Join(config.Recipients(), ",")),
-			slog.String("subject", config.Subject()),
-			slog.String("body", config.Body()),
-		),
-	)
+	configBlob, _ := config.MarshalJSON()
+	jsonBlob := json.RawMessage(configBlob)
+	lib.Log().Info("main.AppMain()", slog.Any("config", jsonBlob))
 	// メールの組み立て
 	mail, err := buildMail()
 	if err != nil {
