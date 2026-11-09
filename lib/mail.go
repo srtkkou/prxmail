@@ -1,4 +1,7 @@
-package prxmail
+/*
+Copyright © 2024 srtkkou <srtkkou@outlook.jp>
+*/
+package lib
 
 import (
 	"errors"

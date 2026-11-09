@@ -1,3 +1,6 @@
+/*
+Copyright © 2024 srtkkou <srtkkou@outlook.jp>
+*/
 package prxmail
 
 import (
@@ -11,6 +14,8 @@ import (
 
 	"github.com/goark/errs"
 	"golang.org/x/term"
+
+	"github.com/srtkkou/prxmail/lib"
 )
 
 var (
@@ -25,22 +30,22 @@ var (
 // 処理の実行
 func AppMain() (code int) {
 	// 設定ファイルの読み込み
-	config := Config()
+	config := lib.Config()
 	err := config.LoadConfig()
 	if err != nil {
-		Log().Errorf("config.LoadConfig()", err)
+		lib.Log().Errorf("config.LoadConfig()", err)
 		return -1
 	}
 	// パイプの読み込み
 	body, err := readPipe()
 	if err != nil {
 		fmt.Println("パイプからメール本文を設定してください。")
-		Log().Errorf("main.readPipe()", err)
+		lib.Log().Errorf("main.readPipe()", err)
 		return -1
 	}
 	config.SetBody(body)
 	// アプリケーション情報の記録
-	Log().Info("main.AppMain()",
+	lib.Log().Info("main.AppMain()",
 		slog.Group("config",
 			slog.String("version", config.Version()),
 			slog.String("commitHash", config.CommitHash()),
@@ -64,12 +69,12 @@ func AppMain() (code int) {
 	// メールの組み立て
 	mail, err := buildMail()
 	if err != nil {
-		Log().Errorf("main.buildMail", err)
+		lib.Log().Errorf("main.buildMail", err)
 		return -1
 	}
 	// メールの送信
-	if err := sendMail(mail); err != nil {
-		Log().Errorf("sender.sendMail", err)
+	if err := lib.SendMail(mail); err != nil {
+		lib.Log().Errorf("sender.sendMail", err)
 		return -1
 	}
 	return 0
@@ -99,9 +104,9 @@ func readPipe() (string, error) {
 }
 
 // メールの組み立て
-func buildMail() (*Mail, error) {
-	config := Config()
-	mail := NewMail()
+func buildMail() (*lib.Mail, error) {
+	config := lib.Config()
+	mail := lib.NewMail()
 	mail.Subject = config.Subject()
 	mail.Body = config.Body()
 	if err := mail.SetFrom(config.From()); err != nil {

@@ -1,3 +1,6 @@
+/*
+Copyright © 2024 srtkkou <srtkkou@outlook.jp>
+*/
 package main
 
 import (
@@ -8,6 +11,7 @@ import (
 	"github.com/spf13/pflag"
 
 	app "github.com/srtkkou/prxmail"
+	"github.com/srtkkou/prxmail/lib"
 )
 
 // コマンド
@@ -35,7 +39,7 @@ var (
 
 func main() {
 	// 設定の取得
-	config := app.Config()
+	config := lib.Config()
 	// 設定の更新
 	config.SetVersion(VERSION)
 	config.SetCommitHash(CommitHash)
@@ -74,7 +78,7 @@ func main() {
 
 // 使用方法の表示
 func (c *appCmd) usage() {
-	config := app.Config()
+	config := lib.Config()
 	fmt.Printf("usage: %s <options>\n", COMMAND)
 	fmt.Println()
 	fmt.Printf("version: %s\n", config.Version())

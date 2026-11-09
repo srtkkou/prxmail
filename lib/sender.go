@@ -1,4 +1,7 @@
-package prxmail
+/*
+Copyright © 2024 srtkkou <srtkkou@outlook.jp>
+*/
+package lib
 
 import (
 	"errors"
@@ -14,7 +17,7 @@ var (
 )
 
 // メールの送信
-func sendMail(mail *Mail) (err error) {
+func SendMail(mail *Mail) (err error) {
 	logMsg := "sender.sendMail()"
 	config := Config()
 	// メッセージの取得
